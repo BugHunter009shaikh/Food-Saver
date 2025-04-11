@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Food Saver — by Shaikh Haareess</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-gradient: linear-gradient(to bottom right, #f2f2f2, #e8e0ff);
+      --card-bg: rgba(255, 255, 255, 0.6);
+      --border: rgba(0, 0, 0, 0.1);
+      --accent: #6c47ff;
+      --text: #2c2c2c;
+      --danger: #ff4d4d;
+      --warn: #ff9800;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg-gradient);
+      color: var(--text);
+      padding: 40px 20px;
+      max-width: 700px;
+      margin: auto;
+    }
+
+    h1 {
+      font-size: 2.5rem;
+      text-align: center;
+      color: var(--accent);
+    }
+
+    h2 {
+      text-align: center;
+      font-weight: 400;
+      color: #444;
+      margin-bottom: 30px;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border-radius: 20px;
+      padding: 25px;
+      border: 1px solid var(--border);
+      backdrop-filter: blur(20px);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+      margin-bottom: 30px;
+      animation: fadeIn 0.4s ease-in-out;
+    }
+
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    input, button {
+      padding: 14px;
+      border: none;
+      border-radius: 12px;
+      font-size: 1rem;
+    }
+
+    input {
+      background: white;
+      border: 1px solid #ddd;
+    }
+
+    button {
+      background: var(--accent);
+      color: white;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.2s;
+    }
+
+    button:hover {
+      background: #5b3fe0;
+      transform: scale(1.02);
+    }
+
+    ul {
+      list-style: none;
+      padding: 0;
+    }
+
+    li {
+      background: white;
+      border-radius: 16px;
+      padding: 18px 20px;
+      margin-bottom: 16px;
+      border-left: 6px solid var(--accent);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 3px 12px rgba(0, 0, 0, 0.05);
+      animation: slideUp 0.3s ease;
+    }
+
+    .expiring {
+      border-left-color: var(--warn);
+    }
+
+    .expired {
+      border-left-color: var(--danger);
+    }
+
+    .used {
+      text-decoration: line-through;
+      color: #999;
+      opacity: 0.7;
+    }
+
+    li button {
+      background: #f5f5f5;
+      color: #333;
+      padding: 6px 12px;
+      margin-left: 10px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      border: 1px solid #ddd;
+      cursor: pointer;
+      transition: background 0.2s ease;
+    }
+
+    li button:hover {
+      background: #eee;
+    }
+
+    .footer {
+      text-align: center;
+      margin-top: 40px;
+      color: #666;
+      font-size: 14px;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes slideUp {
+      from { transform: translateY(20px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    @media (max-width: 600px) {
+      body {
+        padding: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <h1>🥑 Food Saver</h1>
+  <h2>Welcome, Shaikh Haareess</h2>
+
+  <!-- Search & Sort -->
+  <div class="card">
+    <input type="text" id="searchInput" placeholder="Search for food..." />
+    <button onclick="sortByExpiry()">Sort by Expiry Date</button>
+  </div>
+
+  <!-- Form -->
+  <div class="card">
+    <form id="foodForm">
+      <input type="text" id="itemName" placeholder="Food item (e.g., Milk)" required />
+      <input type="date" id="expiryDate" required />
+      <button type="submit">Add Item</button>
+    </form>
+  </div>
+
+  <!-- Food List -->
+  <ul id="foodList"></ul>
+
+  <!-- Recently Deleted -->
+  <div class="card" id="recentlyDeletedBox" style="display:none;">
+    <h3>Recently Deleted</h3>
+    <ul id="deletedList"></ul>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    Designed with care & clarity by <strong>Shaikh Haareess</strong>
+  </div>
+
+  <script>
+    const form = document.getElementById('foodForm');
+    const foodList = document.getElementById('foodList');
+    const searchInput = document.getElementById('searchInput');
+    const deletedList = document.getElementById('deletedList');
+    const recentlyDeletedBox = document.getElementById('recentlyDeletedBox');
+
+    let items = JSON.parse(localStorage.getItem("foodItems") || "[]");
+    let deletedItems = [];
+
+    if ("Notification" in window) {
+      Notification.requestPermission();
+    }
+
+    form.addEventListener('submit', function(e) {
+      e.preventDefault();
+      const name = document.getElementById('itemName').value.trim();
+      const date = document.getElementById('expiryDate').value;
+      if (!name || !date) return;
+      items.push({ name, date, status: 'fresh' });
+      updateLocalStorage();
+      renderList();
+      form.reset();
+    });
+
+    searchInput.addEventListener('input', renderList);
+
+    function sortByExpiry() {
+      items.sort((a, b) => new Date(a.date) - new Date(b.date));
+      renderList();
+    }
+
+    function updateLocalStorage() {
+      localStorage.setItem("foodItems", JSON.stringify(items));
+    }
+
+    function renderList() {
+      foodList.innerHTML = '';
+      const searchTerm = searchInput.value.toLowerCase();
+      const today = new Date();
+
+      items.forEach((item, index) => {
+        if (!item.name.toLowerCase().includes(searchTerm)) return;
+
+        const li = document.createElement('li');
+        const expiry = new Date(item.date);
+        const diffDays = Math.ceil((expiry - today) / (1000 * 60 * 60 * 24));
+
+        let statusText = "Fresh";
+        if (item.status === 'used') {
+          li.classList.add('used');
+          statusText = "Used";
+        } else if (diffDays < 0) {
+          li.classList.add('expired');
+          statusText = "Expired";
+        } else if (diffDays <= 2) {
+          li.classList.add('expiring');
+          statusText = "Expiring Soon";
+          sendNotification(`Shaikh Haareess — "${item.name}" expires in ${diffDays} day(s)!`);
+        }
+
+        li.innerHTML = `
+          <div>
+            <strong>${item.name}</strong> — <small>Expires: ${item.date}</small>
+            <div><span style="font-size: 0.8rem; color: gray;">${statusText}</span></div>
+          </div>
+          <div>
+            ${item.status !== 'used' ? `<button onclick="markUsed(${index})">Used</button>` : ''}
+            <button onclick="deleteItem(${index})">Delete</button>
+          </div>
+        `;
+        foodList.appendChild(li);
+      });
+
+      updateRecentlyDeletedBox();
+    }
+
+    function markUsed(index) {
+      items[index].status = 'used';
+      updateLocalStorage();
+      renderList();
+    }
+
+    function deleteItem(index) {
+      const removed = items.splice(index, 1)[0];
+      deletedItems.unshift(removed);
+      if (deletedItems.length > 5) deletedItems.pop(); // Keep last 5
+      updateLocalStorage();
+      renderList();
+    }
+
+    function undoDelete(index) {
+      const restored = deletedItems.splice(index, 1)[0];
+      items.push(restored);
+      updateLocalStorage();
+      renderList();
+    }
+
+    function updateRecentlyDeletedBox() {
+      if (deletedItems.length === 0) {
+        recentlyDeletedBox.style.display = 'none';
+        return;
+      }
+
+      recentlyDeletedBox.style.display = 'block';
+      deletedList.innerHTML = '';
+      deletedItems.forEach((item, index) => {
+        const li = document.createElement('li');
+        li.innerHTML = `
+          <div><strong>${item.name}</strong> — ${item.date}</div>
+          <button onclick="undoDelete(${index})">Restore</button>
+        `;
+        deletedList.appendChild(li);
+      });
+    }
+
+    function sendNotification(msg) {
+      if (Notification.permission === "granted") {
+        new Notification("🍎 Food Saver", {
+          body: msg,
+          icon: "https://cdn-icons-png.flaticon.com/512/1046/1046857.png"
+        });
+      }
+    }
+
+    setInterval(renderList, 60000);
+    renderList();
+  </script>
+</body>
+</html>
